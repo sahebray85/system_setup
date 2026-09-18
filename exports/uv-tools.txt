@@ -1,0 +1,3 @@
+[1mgraphifyy v0.9.15[0m
+- graphify
+- graphify-mcp

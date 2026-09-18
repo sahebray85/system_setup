@@ -1,0 +1,22 @@
+git: git version 2.47.1.windows.2
+gh: gh version 2.83.2 (2025-12-10)
+node: v24.12.0
+npm: 11.6.2
+python: Python 3.11.9
+pip: pip 26.1.2
+uv: uv 0.11.28 (ebf0f43d7 2026-07-07 x86_64-pc-windows-msvc)
+java: java version "25.0.3" 2026-04-21 LTS
+maven: Apache Maven 3.9.11 (3e54c93a704957b63ee3494413a2b544fd3d825b)
+docker: Docker version 29.6.1, build 8900f1d
+compose: Docker Compose version v5.2.0
+kubectl: Client Version: v1.36.1
+terraform: Terraform v1.15.5
+aws: aws-cli/2.32.22 Python/3.13.11 Windows/11 exe/AMD64
+cloudflared: cloudflared version 2025.8.1 (built 2025-08-21-1534 UTC)
+jq: jq-1.8.1
+tesseract: tesseract v5.4.0.20240606
+code: 1.137.0
+claude: 2.1.277 (Claude Code)
+choco: 2.4.1
+pwsh: 7.6.6
+dotnet_runtimes: Microsoft.NETCore.App 7.0.9 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]; Microsoft.WindowsDesktop.App 7.0.9 [C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App]

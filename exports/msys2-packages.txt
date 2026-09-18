@@ -1,0 +1,10 @@
+autoconf-wrapper 20250528-1
+automake-wrapper 20250528-1
+base 2022.06-1
+filesystem 2025.05.08-2
+gcc 15.2.0-1
+git 2.53.0-1
+libtool 2.5.4-4
+make 4.4.1-2
+msys2-runtime 3.6.6-1
+pkgconf 2.5.1-1

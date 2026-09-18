@@ -1,0 +1,7 @@
+@fission-ai/openspec@1.4.1
+@github/copilot@1.0.21
+@gsd-build/sdk@0.1.0
+@openai/codex@0.144.1
+claudekit-cli@3.35.0
+react-devtools@7.0.1
+uipro-cli@2.2.3

@@ -1,0 +1,137 @@
+{
+  "$schema": "https://aka.ms/winget-packages.schema.2.0.json",
+  "CreationDate": "2026-09-18T23:24:36.335+02:00",
+  "Sources": [
+    {
+      "Packages": [
+        {
+          "PackageIdentifier": "7zip.7zip"
+        },
+        {
+          "PackageIdentifier": "DBeaver.DBeaver.Community"
+        },
+        {
+          "PackageIdentifier": "Docker.DockerDesktop"
+        },
+        {
+          "PackageIdentifier": "Git.Git"
+        },
+        {
+          "PackageIdentifier": "JetBrains.IntelliJIDEA"
+        },
+        {
+          "PackageIdentifier": "Notepad++.Notepad++"
+        },
+        {
+          "PackageIdentifier": "Surfshark.Surfshark"
+        },
+        {
+          "PackageIdentifier": "TeamViewer.TeamViewer"
+        },
+        {
+          "PackageIdentifier": "UB-Mannheim.TesseractOCR"
+        },
+        {
+          "PackageIdentifier": "RARLab.WinRAR"
+        },
+        {
+          "PackageIdentifier": "Google.Chrome"
+        },
+        {
+          "PackageIdentifier": "GitHub.cli"
+        },
+        {
+          "PackageIdentifier": "Google.GoogleDrive"
+        },
+        {
+          "PackageIdentifier": "Amazon.AWSCLI"
+        },
+        {
+          "PackageIdentifier": "Microsoft.Edge"
+        },
+        {
+          "PackageIdentifier": "VideoLAN.VLC"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VisualStudio.2019.BuildTools"
+        },
+        {
+          "PackageIdentifier": "Microsoft.PowerShell"
+        },
+        {
+          "PackageIdentifier": "Cloudflare.cloudflared"
+        },
+        {
+          "PackageIdentifier": "Microsoft.DotNet.DesktopRuntime.7"
+        },
+        {
+          "PackageIdentifier": "Apache.OpenOffice"
+        },
+        {
+          "PackageIdentifier": "Microsoft.WindowsSDK.10.0.19041"
+        },
+        {
+          "PackageIdentifier": "Microsoft.DotNet.AspNetCore.7"
+        },
+        {
+          "PackageIdentifier": "Microsoft.DotNet.Runtime.7"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2015+.x64"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2015+.x86"
+        },
+        {
+          "PackageIdentifier": "Google.Antigravity"
+        },
+        {
+          "PackageIdentifier": "GitHub.Copilot"
+        },
+        {
+          "PackageIdentifier": "Gyan.FFmpeg.Essentials"
+        },
+        {
+          "PackageIdentifier": "Microsoft.OneDrive"
+        },
+        {
+          "PackageIdentifier": "Zoom.Zoom.EXE"
+        },
+        {
+          "PackageIdentifier": "jqlang.jq"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VisualStudioCode"
+        },
+        {
+          "PackageIdentifier": "Anthropic.Claude"
+        },
+        {
+          "PackageIdentifier": "Microsoft.Teams"
+        },
+        {
+          "PackageIdentifier": "Microsoft.365Copilot"
+        },
+        {
+          "PackageIdentifier": "Microsoft.Outlook"
+        },
+        {
+          "PackageIdentifier": "Microsoft.WindowsTerminal"
+        },
+        {
+          "PackageIdentifier": "Microsoft.WSL"
+        },
+        {
+          "PackageIdentifier": "Python.PythonInstallManager"
+        }
+      ],
+      "SourceDetails": {
+        "Argument": "https://cdn.winget.microsoft.com/cache",
+        "Identifier": "Microsoft.Winget.Source_8wekyb3d8bbwe",
+        "Name": "winget",
+        "Type": "Microsoft.PreIndexed.Package"
+      }
+    }
+  ],
+  "WinGetVersion": "1.29.290"
+}

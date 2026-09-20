@@ -61,7 +61,8 @@ account to install.
 - Please do not sign in to any personal or company accounts; the user will do that.
 - Please leave installers' default locations unless noted.
 - Everything above except Norton, Zscaler, BitLocker and account sign-ins can be installed by
-  one script. In an Administrator PowerShell run:
+  one script. Sign in as the Windows account the employee will use (not a setup account),
+  open PowerShell with "Run as administrator", and run:
   ```
   irm https://gist.githubusercontent.com/sahebray85/5ee0da6bf8c918f0ff94af6d58199040/raw/setup-employee.ps1 -OutFile setup-employee.ps1; powershell -ExecutionPolicy Bypass -File .\setup-employee.ps1
   ```

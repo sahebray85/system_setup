@@ -8,7 +8,9 @@
     enables WSL2, writes a WSL memory cap, installs a small VS Code extension set, and prints a
     checklist of the items that need a licence, an account or a company portal.
 
-    HOW TO RUN (as Administrator, in Windows PowerShell):
+    HOW TO RUN: sign in to Windows as the account the employee will use every day (not a vendor
+    or setup account: Ubuntu, VS Code extensions, Python and .wslconfig are per-user), open
+    Windows PowerShell with "Run as administrator", then:
         powershell -ExecutionPolicy Bypass -File .\setup-employee.ps1
 
     Or download and run in one line:

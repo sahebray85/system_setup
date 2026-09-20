@@ -9,6 +9,7 @@ they finish.
 |---|---|---|
 | `setup-employee.ps1` | Fresh install: winget apps, Maven, JDK 25 + `JAVA_HOME`, Python 3.11, VS Code extensions, MSYS2 tools, WSL2 + Ubuntu 24.04, `.wslconfig`, manual checklist | `setup-employee-report.html`: every step PASS / FAIL / SKIP with an action for each failure |
 | `update-employee.ps1` | Checks every installed tool for a newer version; with `-Install` applies the updates | `update-employee-report.html`: every tool UP-TO-DATE / AVAILABLE / UPDATED / FAILED with the install command |
+| `update-employee.ps1 -Diff` | Compares the laptop with the standard toolset (missing / outdated / current), read-only | `laptop-diff-report.html` with **Start the upgrade** and **Install missing items** buttons |
 
 ## Before you start
 
@@ -71,6 +72,25 @@ powershell -ExecutionPolicy Bypass -File .\update-employee.ps1 -Install   # chec
   Desktop / IntelliJ in-app updaters if winget has not caught up yet.
 
 Areas: `winget, choco, vscode, wsl, msys2, windows`. Use `-Only` / `-Skip` as above.
+
+## 3. Show the diff and start the upgrade from the report
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\update-employee.ps1 -Diff
+```
+
+No admin rights needed. It compares the laptop with the standard toolset: every winget app,
+Maven, `JAVA_HOME`, Python 3.11, the 8 VS Code extensions, the 6 MSYS2 packages, Ubuntu 24.04
+and `.wslconfig`. Each item is MISSING, OUTDATED or CURRENT, and the report opens with:
+
+- **Start the upgrade**: runs `update-employee.ps1 -Install` for the outdated items.
+- **Install missing items**: runs `setup-employee.ps1` (idempotent, only adds what is missing).
+
+The buttons link to `Start-Upgrade.cmd` / `Start-Setup.cmd`, written next to the report.
+A browser cannot run PowerShell from a link, so the `.cmd` opens an elevated PowerShell and
+Windows shows the UAC prompt. If the browser refuses to open the file, double-click the
+`.cmd` on the Desktop. When the script was fetched from the Gist rather than a folder, the
+`.cmd` downloads the script again from the Gist before running it.
 
 ## What is installed
 

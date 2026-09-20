@@ -66,4 +66,6 @@ account to install.
   ```
   irm https://gist.githubusercontent.com/sahebray85/5ee0da6bf8c918f0ff94af6d58199040/raw/setup-employee.ps1 -OutFile setup-employee.ps1; powershell -ExecutionPolicy Bypass -File .\setup-employee.ps1
   ```
-  Reboot when it asks, run it once more, then work through the checklist it prints.
+  Reboot when it asks, run it once more, then work through the checklist it prints. It saves
+  an HTML report on the Desktop showing each step as pass or fail with what to do about failures.
+  Full instructions and the update script are in `employee-laptop/README.md`.

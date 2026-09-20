@@ -45,14 +45,15 @@ source URL and version here or move them under winget/choco so a rebuild is repr
 - Decide on a single JDK layout (for example only `.jdks` managed by IntelliJ, or only winget-managed JDKs).
 - Install a .NET SDK if any .NET project work is expected.
 
-## Employee laptop setup script
+## Employee laptop scripts
 
-`setup-employee.ps1` is the clean install for new employee laptops and follows
-`SOFTWARE_LIST_curated.md` (winget for everything, Chocolatey only for Maven, JDK 25 only,
-eight VS Code extensions, `.wslconfig` cap). It is published as a public Gist so a vendor can
-fetch it without repo access: https://gist.github.com/sahebray85/5ee0da6bf8c918f0ff94af6d58199040
-(raw: https://gist.githubusercontent.com/sahebray85/5ee0da6bf8c918f0ff94af6d58199040/raw/setup-employee.ps1).
-After editing the script, push the new version with
-`gh gist edit 5ee0da6bf8c918f0ff94af6d58199040 -f setup-employee.ps1 setup-employee.ps1`.
-Keep it free of company names, account details and local paths. `bootstrap.ps1` remains the
+`employee-laptop/` holds the clean install for new employee laptops (`setup-employee.ps1`),
+the version-check/update companion (`update-employee.ps1`) and a `README.md` with run
+instructions. Both follow `SOFTWARE_LIST_curated.md` (winget for everything, Chocolatey only
+for Maven, JDK 25 only, eight VS Code extensions, `.wslconfig` cap) and write an HTML
+pass/fail report on the Desktop with an action for every failure. They are published as a
+public Gist so a vendor can fetch them without repo access:
+https://gist.github.com/sahebray85/5ee0da6bf8c918f0ff94af6d58199040
+After editing, push with `gh gist edit 5ee0da6bf8c918f0ff94af6d58199040 -f <name>.ps1 employee-laptop/<name>.ps1`.
+Keep them free of company names, account details and local paths. `bootstrap.ps1` remains the
 replay of the owner's own machine and is not for employees.

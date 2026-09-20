@@ -1,16 +1,4 @@
-# OS / editor noise
-Thumbs.db
-desktop.ini
-.DS_Store
-.idea/
-.vscode/
-*.swp
-
-# Local secrets or credentials must never be committed
-*.pem
-*.key
-.env
-.env.*
-
-# Claude Code local worktrees
-.claude/worktrees/
+# Generated on the laptop by the employee-laptop scripts; never commit
+*-report.html
+Start-Upgrade.cmd
+Start-Setup.cmd

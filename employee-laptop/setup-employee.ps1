@@ -157,8 +157,9 @@ function Invoke-Cmd {
     if ($DryRun) { Add-Result $Step $Display 'DRYRUN' 'Not executed (DryRun)' ''; return }
     $global:LASTEXITCODE = 0
     try {
-        & $Action
-        if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { Add-Result $Step $Display 'FAIL' "exit code $LASTEXITCODE" $Fix }
+        # Echo the tool's output live but keep it, so the report can show the real error message.
+        $output = @(& $Action 2>&1 | ForEach-Object { $line = "$_"; Write-Host "    $line"; $line })
+        if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { Add-Result $Step $Display 'FAIL' "exit code $LASTEXITCODE ($(ConvertTo-ExitHint $LASTEXITCODE)): $(Get-LastLines $output)" $Fix }
         else                                          { Add-Result $Step $Display 'PASS' }
     } catch {
         Add-Result $Step $Display 'FAIL' $_.Exception.Message $Fix
@@ -173,6 +174,25 @@ function Install-WingetPackage([string]$Id, [string]$Source = 'winget', [string]
     }
     Invoke-Cmd 'winget' "winget install --id $Id" -Fix $Fix {
         winget install --id $Id --exact --source $Source --accept-source-agreements --accept-package-agreements --no-upgrade --disable-interactivity
+    }
+}
+function Get-LastLines([string[]]$Lines, [int]$Count = 3) {
+    # Last few meaningful lines of a tool's output, for the report.
+    $clean = @($Lines | ForEach-Object { ($_ -replace '\x1b\[[0-9;]*m', '').Trim() } | Where-Object { $_ -and $_ -notmatch '^[-\\|/ ]+$' -and $_ -notmatch '^\d+(\.\d+)? [KMG]B / ' })
+    if ($clean.Count -eq 0) { return '' }
+    return ($clean | Select-Object -Last $Count) -join ' | '
+}
+function ConvertTo-ExitHint([int]$Code) {
+    # Well-known winget exit codes, so the report is readable without looking them up.
+    switch ('{0:X8}' -f $Code) {
+        '8A150006' { 'installer failed; app may be running or its own updater is required' }
+        '8A150101' { 'package in use: close the application and retry' }
+        '8A15010D' { 'another install is already in progress' }
+        '8A150011' { 'installer hash mismatch: winget catalog lag, retry later' }
+        '8A150014' { 'no applicable installer for this machine' }
+        '8A15005E' { 'a source could not be reached (TLS inspection or proxy)' }
+        '8A150102' { 'reboot required to finish' }
+        default    { 'see message' }
     }
 }
 function ConvertTo-HtmlText([string]$s) {

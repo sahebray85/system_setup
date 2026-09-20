@@ -188,16 +188,16 @@ if ($Areas -contains 'winget') {
         foreach ($id in $WingetIds) {
             $u = $managedUp | Where-Object Id -eq $id | Select-Object -First 1
             if (-not $u) { Add-Result 'winget' $id '' '' 'UP-TO-DATE' 'no newer version listed by winget'; continue }
-            $cmd = "winget upgrade --id $id --exact --accept-source-agreements --accept-package-agreements --disable-interactivity"
+            $cmd = "winget upgrade --id $id --exact --source winget --accept-source-agreements --accept-package-agreements --disable-interactivity"
             if ($Install) {
-                $null = Invoke-Update 'winget' $id $u.Version $u.Available -Fix "Run in an Administrator PowerShell:  $cmd  and read the message. If the app is open, close it and retry. If winget says the installer hash mismatched, wait a day (catalog lag) or install from the vendor site." { winget upgrade --id $id --exact --accept-source-agreements --accept-package-agreements --disable-interactivity }
+                $null = Invoke-Update 'winget' $id $u.Version $u.Available -Fix "Run in an Administrator PowerShell:  $cmd  and read the message. If the app is open, close it and retry. If winget says the installer hash mismatched, wait a day (catalog lag) or install from the vendor site." { winget upgrade --id $id --exact --source winget --accept-source-agreements --accept-package-agreements --disable-interactivity }
             } else {
                 Add-Result 'winget' $id $u.Version $u.Available 'AVAILABLE' 'newer version in winget' "Run in an Administrator PowerShell:  $cmd   (or rerun this script with -Install)"
             }
         }
         $other = @($upgrades | Where-Object { $WingetIds -notcontains $_.Id })
         foreach ($u in $other) {
-            Add-Result 'winget' $u.Id $u.Version $u.Available 'MANUAL' 'not managed by setup-employee.ps1; left alone' "Optional. To update it run:  winget upgrade --id $($u.Id) --exact"
+            Add-Result 'winget' $u.Id $u.Version $u.Available 'MANUAL' 'not managed by setup-employee.ps1; left alone' "Optional. To update it run:  winget upgrade --id $($u.Id) --exact --source winget"
         }
     }
 }
@@ -231,7 +231,7 @@ if ($Areas -contains 'vscode') {
     } else {
         # The CLI cannot list which extensions are outdated, but it can update them all in one call.
         if ($Install) {
-            $null = Invoke-Update 'vscode' 'code --update-extensions' '' '' -Fix 'Open VS Code, press Ctrl+Shift+X and click the "Update All" button, or run  code --update-extensions  in a terminal.' { code --update-extensions }
+            $null = Invoke-Update 'vscode' 'code --update-extensions' '' '' -Fix 'Open VS Code, press Ctrl+Shift+X and click the "Update All" button, or run  code --update-extensions  in a terminal. If the error mentions "unable to verify the first certificate", a security product is inspecting TLS: open VS Code itself (it uses the Windows certificate store) and update from the Extensions view.' { code --update-extensions }
         } else {
             $n = @(code --list-extensions 2>$null).Count
             Add-Result 'vscode' "extensions ($n installed)" '' '' 'MANUAL' 'VS Code updates extensions itself when it starts' 'To force it now run:  code --update-extensions   (or rerun this script with -Install). VS Code itself is updated through winget above.'
@@ -277,7 +277,7 @@ if ($Areas -contains 'wsl') {
 if ($Areas -contains 'msys2') {
     Write-Step 'msys2: packages'
     $bash = 'C:\msys64\usr\bin\bash.exe'
-    $fixMsys = "Open 'MSYS2 MSYS' from the Start menu and run:  pacman -Syu --noconfirm  (twice if the window closes)."
+    $fixMsys = "Open 'MSYS2 MSYS' from the Start menu and run:  pacman -Syu --noconfirm  (twice if the window closes). If it reports SSL certificate errors from the mirrors, a security product is inspecting TLS: export the proxy root certificate to /etc/pki/ca-trust/source/anchors/ and run  update-ca-trust  inside MSYS2, or update MSYS2 on a network without inspection."
     if (-not (Test-Path $bash)) {
         Add-Result 'msys2' 'pacman' '' '' 'UNKNOWN' 'MSYS2 not found at C:\msys64' 'MSYS2 is not installed; run setup-employee.ps1 first.'
     } elseif ($Install) {

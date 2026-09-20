@@ -20,7 +20,7 @@ account to install.
 - WinMerge
 
 ## Programming languages and runtimes
-- Oracle JDK 25 (LTS), plus OpenJDK 17 and 21 (LTS)
+- Oracle JDK 25 (LTS)
 - Node.js 24 LTS (includes npm)
 - Python 3.11 via Python Install Manager, plus `uv`
 - PowerShell 7
@@ -56,3 +56,13 @@ account to install.
 - Zoom Workplace
 - WhatsApp Desktop
 - Adobe Acrobat Reader
+
+## Notes for the vendor
+- Please do not sign in to any personal or company accounts; the user will do that.
+- Please leave installers' default locations unless noted.
+- Everything above except Norton, Zscaler, BitLocker and account sign-ins can be installed by
+  one script. In an Administrator PowerShell run:
+  ```
+  irm https://gist.githubusercontent.com/sahebray85/5ee0da6bf8c918f0ff94af6d58199040/raw/setup-employee.ps1 -OutFile setup-employee.ps1; powershell -ExecutionPolicy Bypass -File .\setup-employee.ps1
+  ```
+  Reboot when it asks, run it once more, then work through the checklist it prints.

@@ -9,6 +9,13 @@
     AVAILABLE or UNKNOWN, with the exact command to install each update. With -Install it applies
     the updates and reports UPDATED or FAILED with an action for every failure.
 
+    With -Diff it instead compares the laptop against the standard toolset (every application,
+    Maven, JDK/JAVA_HOME, Python 3.11, VS Code extensions, MSYS2 packages, Ubuntu, .wslconfig)
+    and writes laptop-diff-report.html with each item marked MISSING, OUTDATED or CURRENT. The
+    report ends with clickable "Start the upgrade" / "Install missing items" buttons that launch
+    the upgrade in an elevated PowerShell (via Start-Upgrade.cmd / Start-Setup.cmd written next
+    to the report). No admin rights are needed for -Diff itself.
+
     What it checks:
       winget   every application installed by setup-employee.ps1 (winget upgrade)
       choco    Apache Maven (choco outdated)
@@ -20,12 +27,16 @@
     HOW TO RUN (Administrator PowerShell, as the employee's own account):
         powershell -ExecutionPolicy Bypass -File .\update-employee.ps1            # check only
         powershell -ExecutionPolicy Bypass -File .\update-employee.ps1 -Install   # check and install
+        powershell -ExecutionPolicy Bypass -File .\update-employee.ps1 -Diff      # compare with the standard toolset
 
     Or download and run in one line:
         irm https://gist.githubusercontent.com/sahebray85/5ee0da6bf8c918f0ff94af6d58199040/raw/update-employee.ps1 -OutFile update-employee.ps1; powershell -ExecutionPolicy Bypass -File .\update-employee.ps1
 
 .PARAMETER Install
     Install the available updates instead of only reporting them.
+.PARAMETER Diff
+    Compare the laptop with the standard toolset (missing / outdated / current) and write a report
+    with buttons to start the upgrade. Read-only.
 .PARAMETER Only
     Check only these areas: winget, choco, vscode, wsl, msys2, windows.
 .PARAMETER Skip
@@ -38,6 +49,7 @@
 [CmdletBinding()]
 param(
     [switch]$Install,
+    [switch]$Diff,
     [ValidateSet('winget','choco','vscode','wsl','msys2','windows')][string[]]$Only,
     [ValidateSet('winget','choco','vscode','wsl','msys2','windows')][string[]]$Skip = @(),
     [string]$ReportPath,
@@ -55,8 +67,11 @@ $Started  = Get-Date
 if (-not $ReportPath) {
     $desktop = [Environment]::GetFolderPath('Desktop')
     if (-not $desktop) { $desktop = $env:USERPROFILE }
-    $ReportPath = Join-Path $desktop 'update-employee-report.html'
+    $ReportPath = Join-Path $desktop $(if ($Diff) { 'laptop-diff-report.html' } else { 'update-employee-report.html' })
 }
+$ScriptPath  = $MyInvocation.MyCommand.Path
+$SetupPath   = if ($ScriptPath) { Join-Path (Split-Path $ScriptPath) 'setup-employee.ps1' } else { '' }
+$GistRaw     = 'https://gist.githubusercontent.com/sahebray85/5ee0da6bf8c918f0ff94af6d58199040/raw'
 
 # Same list as setup-employee.ps1. Only these are upgraded with -Install; anything else winget
 # reports is listed as "available, not managed" so nothing unexpected changes.
@@ -73,6 +88,11 @@ $WingetIds = @(
     'Microsoft.Office', 'Microsoft.Teams', 'Zoom.Zoom', 'Adobe.Acrobat.Reader.64-bit'
 )
 $UbuntuDistro = 'Ubuntu-24.04'
+$VsCodeExtensions = @(
+    'anthropic.claude-code', 'github.copilot', 'github.copilot-chat', 'ms-python.python',
+    'vscjava.vscode-java-pack', 'ms-azuretools.vscode-containers', 'eamodio.gitlens', 'ms-vscode.powershell'
+)
+$Msys2Packages = 'gcc','make','autoconf','automake','libtool','pkgconf'
 
 # ---------------------------------------------------------------- helpers
 function Write-Step([string]$Name) { Write-Host "`n=== $Name ===" -ForegroundColor Cyan }
@@ -81,10 +101,10 @@ function Test-Cmd([string]$Name)   { [bool](Get-Command $Name -ErrorAction Silen
 function Add-Result {
     # Status: UP-TO-DATE, AVAILABLE (update exists, not installed), UPDATED, FAILED, UNKNOWN (could not check), MANUAL
     param([string]$Area, [string]$Item, [string]$Installed, [string]$Available,
-          [ValidateSet('UP-TO-DATE','AVAILABLE','UPDATED','FAILED','UNKNOWN','MANUAL')][string]$Status,
+          [ValidateSet('UP-TO-DATE','AVAILABLE','UPDATED','FAILED','UNKNOWN','MANUAL','MISSING','OUTDATED','CURRENT')][string]$Status,
           [string]$Detail = '', [string]$Action = '')
     $Results.Add([pscustomobject]@{ Area=$Area; Item=$Item; Installed=$Installed; Available=$Available; Status=$Status; Detail=$Detail; Action=$Action })
-    $colour = switch ($Status) { 'UP-TO-DATE' {'Green'} 'UPDATED' {'Green'} 'AVAILABLE' {'Yellow'} 'FAILED' {'Red'} default {'Gray'} }
+    $colour = switch ($Status) { 'UP-TO-DATE' {'Green'} 'UPDATED' {'Green'} 'CURRENT' {'Green'} 'AVAILABLE' {'Yellow'} 'OUTDATED' {'Yellow'} 'FAILED' {'Red'} 'MISSING' {'Red'} default {'Gray'} }
     Write-Host ("  {0,-12} {1}  {2}" -f $Status, $Item, $(if ($Available) { "$Installed -> $Available" } else { $Detail })) -ForegroundColor $colour
 }
 function Invoke-Update {
@@ -106,25 +126,104 @@ function ConvertTo-HtmlText([string]$s) {
     $s = $s.Replace('&','&amp;').Replace('<','&lt;').Replace('>','&gt;').Replace('"','&quot;')
     return [regex]::Replace($s, 'https?://[^\s)]+', { param($m) "<a href=`"$($m.Value)`">$($m.Value)</a>" })
 }
-function Get-WingetUpgrades {
-    # Parses the fixed-width table printed by "winget upgrade". Returns objects with Id, Version, Available.
-    $raw = (winget upgrade --include-unknown --accept-source-agreements --disable-interactivity 2>$null) | Out-String
+function Get-WingetTable {
+    # Parses the fixed-width table printed by "winget upgrade" or "winget list".
+    # Returns objects with Id, Version, Available (Available is '' when no newer version).
+    param([string[]]$WingetArgs)
+    $raw = (& winget @WingetArgs --accept-source-agreements --disable-interactivity 2>$null) | Out-String
     $lines = $raw -split "`r?`n" | Where-Object { $_.Trim() }
-    $header = $lines | Where-Object { $_ -match '^\s*Name\s+Id\s+Version\s+Available' } | Select-Object -First 1
+    $header = $lines | Where-Object { $_ -match '^\s*Name\s+Id\s+Version' } | Select-Object -First 1
     if (-not $header) { return @() }
     $idCol = $header.IndexOf('Id'); $verCol = $header.IndexOf('Version'); $avCol = $header.IndexOf('Available'); $srcCol = $header.IndexOf('Source')
     if ($srcCol -lt 0) { $srcCol = $header.Length }
+    if ($avCol -lt 0)  { $avCol = $srcCol }
     $out = @()
     $started = $false
     foreach ($l in $lines) {
         if ($l -eq $header) { $started = $true; continue }
-        if (-not $started -or $l -match '^-+$' -or $l -match 'upgrades? available' -or $l.Length -lt $avCol) { continue }
+        if (-not $started -or $l -match '^-+$' -or $l -match 'upgrades? available' -or $l.Length -le $verCol) { continue }
         $id  = $l.Substring($idCol,  [Math]::Min($verCol - $idCol, $l.Length - $idCol)).Trim()
         $ver = $l.Substring($verCol, [Math]::Min($avCol - $verCol, $l.Length - $verCol)).Trim()
-        $av  = $l.Substring($avCol,  [Math]::Min($srcCol - $avCol, $l.Length - $avCol)).Trim()
-        if ($id -and $av) { $out += [pscustomobject]@{ Id = $id; Version = $ver; Available = $av } }
+        $av  = if ($l.Length -gt $avCol -and $avCol -lt $srcCol) { $l.Substring($avCol, [Math]::Min($srcCol - $avCol, $l.Length - $avCol)).Trim() } else { '' }
+        if ($id) { $out += [pscustomobject]@{ Id = $id; Version = $ver; Available = $av } }
     }
     return $out
+}
+function Get-WingetUpgrades { @(Get-WingetTable @('upgrade','--include-unknown') | Where-Object { $_.Available }) }
+function Write-Launcher {
+    # Writes a .cmd next to the report that opens an elevated PowerShell and runs the given script.
+    # Browsers will not run a .ps1 from a link, but a file:// link to a .cmd opens it (after a prompt).
+    param([string]$Name, [string]$LocalScript, [string]$RemoteName, [string]$ScriptArgs)
+    $path = Join-Path (Split-Path $ReportPath) $Name
+    if ($LocalScript -and (Test-Path $LocalScript)) {
+        $inner = "-NoProfile -ExecutionPolicy Bypass -File \""$LocalScript\"" $ScriptArgs"
+    } else {
+        $inner = "-NoProfile -ExecutionPolicy Bypass -Command \""irm $GistRaw/$RemoteName -OutFile `$env:TEMP\$RemoteName; & `$env:TEMP\$RemoteName $ScriptArgs\"""
+    }
+    $lines = @(
+        '@echo off',
+        'echo Starting an elevated PowerShell. Accept the UAC prompt when it appears.',
+        "powershell -NoProfile -Command `"Start-Process powershell -Verb RunAs -ArgumentList '$($inner.Replace("'", "''"))'`""
+    )
+    Set-Content -Path $path -Value ($lines -join "`r`n") -Encoding ASCII
+    return $path
+}
+function Write-DiffReport {
+    param([string]$UpgradeCmd, [string]$SetupCmd)
+    $counts = @{}
+    foreach ($st in 'MISSING','OUTDATED','CURRENT','UNKNOWN') { $counts[$st] = @($Results | Where-Object Status -eq $st).Count }
+    $overall = if ($counts['MISSING'] -gt 0) { 'ITEMS MISSING' } elseif ($counts['OUTDATED'] -gt 0) { 'UPDATES AVAILABLE' } else { 'MATCHES STANDARD' }
+    $overallClass = if ($counts['MISSING'] -gt 0) { 'missing' } elseif ($counts['OUTDATED'] -gt 0) { 'outdated' } else { 'current' }
+    $upHref = 'file:///' + $UpgradeCmd.Replace('\', '/')
+    $seHref = 'file:///' + $SetupCmd.Replace('\', '/')
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.AppendLine('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Laptop diff report</title>')
+    [void]$sb.AppendLine('<style>body{font-family:Segoe UI,Arial,sans-serif;margin:24px;color:#222;max-width:1200px}h1{margin:0 0 4px}.meta{color:#666;margin-bottom:16px}')
+    [void]$sb.AppendLine('.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-weight:600;font-size:13px}.current{background:#d4edda;color:#155724}.outdated{background:#fff3cd;color:#856404}.missing{background:#f8d7da;color:#721c24}.unknown{background:#e2e3e5;color:#383d41}')
+    [void]$sb.AppendLine('.overall{font-size:20px;padding:6px 16px}table{border-collapse:collapse;width:100%;margin-top:12px}th,td{border:1px solid #ddd;padding:8px;vertical-align:top;text-align:left;font-size:14px}th{background:#f4f4f4}tr.missing td{background:#fff5f5}tr.outdated td{background:#fffdf3}code{background:#f4f4f4;padding:1px 4px}')
+    [void]$sb.AppendLine('h2{margin-top:28px;border-bottom:1px solid #ddd;padding-bottom:4px}.btn{display:inline-block;margin:8px 12px 8px 0;padding:12px 22px;border-radius:6px;font-size:16px;font-weight:600;text-decoration:none;color:#fff}.btn-up{background:#0d6efd}.btn-setup{background:#dc3545}.how{background:#f8f9fa;border:1px solid #ddd;padding:12px;border-radius:6px;margin-top:8px}</style></head><body>')
+    [void]$sb.AppendLine("<h1>Laptop diff report</h1><div class=`"meta`">$env:COMPUTERNAME &middot; user $env:USERNAME &middot; $(Get-Date -Format 'yyyy-MM-dd HH:mm') &middot; compared against the standard developer toolset</div>")
+    [void]$sb.AppendLine("<span class=`"badge overall $overallClass`">$overall</span> &nbsp; <span class=`"badge current`">$($counts['CURRENT']) current</span> <span class=`"badge outdated`">$($counts['OUTDATED']) outdated</span> <span class=`"badge missing`">$($counts['MISSING']) missing</span> <span class=`"badge unknown`">$($counts['UNKNOWN']) unknown</span>")
+
+    [void]$sb.AppendLine('<h2>Next step</h2>')
+    if ($counts['OUTDATED'] -gt 0) {
+        [void]$sb.AppendLine("<a class=`"btn btn-up`" href=`"$upHref`">&#9654; Start the upgrade ($($counts['OUTDATED']) items)</a>")
+    }
+    if ($counts['MISSING'] -gt 0) {
+        [void]$sb.AppendLine("<a class=`"btn btn-setup`" href=`"$seHref`">&#9654; Install missing items ($($counts['MISSING']) items)</a>")
+    }
+    if ($counts['OUTDATED'] -eq 0 -and $counts['MISSING'] -eq 0) {
+        [void]$sb.AppendLine('<p>Nothing to do: this laptop matches the standard toolset and everything is current.</p>')
+    } else {
+        [void]$sb.AppendLine("<div class=`"how`">Clicking a button opens <code>$(ConvertTo-HtmlText (Split-Path $UpgradeCmd -Leaf))</code> / <code>$(ConvertTo-HtmlText (Split-Path $SetupCmd -Leaf))</code> from the same folder as this report (the browser may ask you to confirm: choose Open or Keep). It starts an elevated PowerShell: accept the UAC prompt. If the browser blocks it, double-click the .cmd file on the Desktop instead, or run in an Administrator PowerShell:<br><code>powershell -ExecutionPolicy Bypass -File update-employee.ps1 -Install</code> &nbsp; / &nbsp; <code>powershell -ExecutionPolicy Bypass -File setup-employee.ps1</code></div>")
+    }
+
+    foreach ($section in @(
+        @{ Status='MISSING';  Title='Missing: installed by setup-employee.ps1' },
+        @{ Status='OUTDATED'; Title='Outdated: installed by the upgrade' },
+        @{ Status='UNKNOWN';  Title='Could not check' })) {
+        $rows = @($Results | Where-Object Status -eq $section.Status)
+        if ($rows.Count -eq 0) { continue }
+        [void]$sb.AppendLine("<h2>$($section.Title)</h2><table><tr><th style=`"width:8%`">Area</th><th style=`"width:24%`">Item</th><th style=`"width:11%`">Installed</th><th style=`"width:11%`">Expected / latest</th><th>Detail and manual command</th></tr>")
+        foreach ($r in $rows) {
+            $act = if ($r.Action) { '<br><code>' + (ConvertTo-HtmlText $r.Action) + '</code>' } else { '' }
+            [void]$sb.AppendLine("<tr class=`"$($r.Status.ToLower())`"><td>$(ConvertTo-HtmlText $r.Area)</td><td><code>$(ConvertTo-HtmlText $r.Item)</code></td><td>$(ConvertTo-HtmlText $r.Installed)</td><td>$(ConvertTo-HtmlText $r.Available)</td><td>$(ConvertTo-HtmlText $r.Detail)$act</td></tr>")
+        }
+        [void]$sb.AppendLine('</table>')
+    }
+    [void]$sb.AppendLine('<h2>Everything compared</h2><table><tr><th style="width:8%">Area</th><th style="width:28%">Item</th><th style="width:11%">Status</th><th style="width:11%">Installed</th><th style="width:11%">Expected / latest</th><th>Detail</th></tr>')
+    foreach ($r in $Results) {
+        $cls = $r.Status.ToLower()
+        [void]$sb.AppendLine("<tr class=`"$cls`"><td>$(ConvertTo-HtmlText $r.Area)</td><td><code>$(ConvertTo-HtmlText $r.Item)</code></td><td><span class=`"badge $cls`">$($r.Status)</span></td><td>$(ConvertTo-HtmlText $r.Installed)</td><td>$(ConvertTo-HtmlText $r.Available)</td><td>$(ConvertTo-HtmlText $r.Detail)</td></tr>")
+    }
+    [void]$sb.AppendLine("</table><p class=`"meta`">Report written by update-employee.ps1 -Diff to $(ConvertTo-HtmlText $ReportPath)</p></body></html>")
+    try {
+        Set-Content -Path $ReportPath -Value $sb.ToString() -Encoding UTF8
+        Write-Host "`nReport: $ReportPath" -ForegroundColor Cyan
+        if (-not $NoOpen) { Start-Process $ReportPath -ErrorAction SilentlyContinue }
+    } catch {
+        Write-Host "Could not write report to $ReportPath ($($_.Exception.Message))" -ForegroundColor Red
+    }
 }
 function Write-Report {
     $counts = @{}
@@ -173,6 +272,82 @@ Write-Host "update-employee.ps1  admin=$IsAdmin  install=$Install"
 Write-Host "areas: $($Areas -join ', ')"
 if ($Install -and -not $IsAdmin) {
     Write-Host '-Install needs an elevated (Administrator) PowerShell. Right-click PowerShell, "Run as administrator", then rerun.' -ForegroundColor Red
+    return
+}
+
+# ---------------------------------------------------------------- diff mode
+if ($Diff) {
+    Write-Step 'diff: this laptop vs the standard toolset'
+    if (-not (Test-Cmd winget)) {
+        Add-Result 'winget' 'winget' '' '' 'UNKNOWN' 'winget.exe not found' 'Install "App Installer" from the Microsoft Store, then rerun.'
+    } else {
+        Write-Host '  > winget list --source winget (this takes a minute)'
+        $installed = @(Get-WingetTable @('list','--source','winget'))
+        foreach ($id in $WingetIds) {
+            $row = $installed | Where-Object Id -eq $id | Select-Object -First 1
+            if (-not $row)          { Add-Result 'winget' $id '' 'latest' 'MISSING' 'not installed' "winget install --id $id --exact --source winget" }
+            elseif ($row.Available) { Add-Result 'winget' $id $row.Version $row.Available 'OUTDATED' 'newer version in winget' "winget upgrade --id $id --exact --source winget" }
+            else                    { Add-Result 'winget' $id $row.Version '' 'CURRENT' 'installed, no newer version listed' }
+        }
+    }
+    # Maven
+    if (Test-Cmd mvn) {
+        $v = ((mvn -v 2>$null | Select-Object -First 1) -replace '^Apache Maven\s+','' -replace '\s.*$','')
+        $out = if (Test-Cmd choco) { @(choco outdated -r --no-color 2>$null | Where-Object { $_ -match '^maven\|' }) } else { @() }
+        if ($out.Count -gt 0) { Add-Result 'maven' 'Apache Maven' $v (($out[0] -split '\|')[2]) 'OUTDATED' 'newer version in Chocolatey' 'choco upgrade maven -y' }
+        else                  { Add-Result 'maven' 'Apache Maven' $v '3.9.x' 'CURRENT' 'mvn found on PATH' }
+    } else { Add-Result 'maven' 'Apache Maven' '' '3.9.x' 'MISSING' 'mvn not on PATH' 'choco install maven -y  (setup-employee.ps1 does this)' }
+    # Java
+    $jh = [Environment]::GetEnvironmentVariable('JAVA_HOME','Machine')
+    if ($jh -and (Test-Path (Join-Path $jh 'bin\java.exe'))) {
+        if ($jh -match 'jdk-25|Java25') { Add-Result 'java' 'JAVA_HOME' $jh 'JDK 25' 'CURRENT' 'points to JDK 25' }
+        else { Add-Result 'java' 'JAVA_HOME' $jh 'JDK 25' 'OUTDATED' 'points to a different JDK' 'Set JAVA_HOME to C:\Program Files\Java\jdk-25.x (setup-employee.ps1 -Only java does this)' }
+    } else {
+        $shown = if ($jh) { $jh } else { '(not set)' }
+        Add-Result 'java' 'JAVA_HOME' $shown 'JDK 25' 'MISSING' 'JAVA_HOME not set or folder missing' 'Run setup-employee.ps1 -Only winget,java'
+    }
+    # Python 3.11
+    if (Test-Cmd py) {
+        $pyl = (py list 2>$null | Out-String)
+        if ($pyl -match '3\.11') {
+            $line = ($pyl -split "`r?`n" | Where-Object { $_ -match '3\.11' } | Select-Object -First 1).Trim()
+            Add-Result 'python' 'Python 3.11' $line '3.11' 'CURRENT' 'installed via Python Install Manager'
+        } else { Add-Result 'python' 'Python 3.11' '' '3.11' 'MISSING' 'py list does not show 3.11' 'py install 3.11' }
+    } else { Add-Result 'python' 'Python 3.11' '' '3.11' 'MISSING' 'Python Install Manager (py) not on PATH' 'winget install --id Python.PythonInstallManager --exact --source winget ; py install 3.11' }
+    # VS Code extensions
+    if (Test-Cmd code) {
+        $exts = @(code --list-extensions 2>$null | ForEach-Object { $_.Trim().ToLower() })
+        foreach ($e in $VsCodeExtensions) {
+            if ($exts -contains $e.ToLower()) { Add-Result 'vscode' $e 'installed' '' 'CURRENT' 'extension present' }
+            else                              { Add-Result 'vscode' $e '' 'required' 'MISSING' 'extension not installed' "code --install-extension $e" }
+        }
+    } else { Add-Result 'vscode' 'VS Code extensions (8)' '' '' 'UNKNOWN' 'VS Code "code" CLI not on PATH' 'Install VS Code first, then rerun.' }
+    # MSYS2 packages
+    $pacman = 'C:\msys64\usr\bin\pacman.exe'
+    if (Test-Path $pacman) {
+        $have = @(& $pacman -Qq 2>$null)
+        foreach ($pk in $Msys2Packages) {
+            if ($have -contains $pk) { Add-Result 'msys2' $pk 'installed' '' 'CURRENT' 'pacman package present' }
+            else                     { Add-Result 'msys2' $pk '' 'required' 'MISSING' 'pacman package not installed' "In 'MSYS2 MSYS': pacman -S --needed --noconfirm $pk" }
+        }
+    } else { Add-Result 'msys2' 'MSYS2 packages (6)' '' '' 'MISSING' 'MSYS2 not installed at C:\msys64' 'winget install --id MSYS2.MSYS2 --exact --source winget, then setup-employee.ps1 -Only msys2' }
+    # WSL / Ubuntu / .wslconfig
+    if (Test-Cmd wsl) {
+        $distros = ((wsl --list --quiet 2>$null) | Out-String) -replace "`0", ''
+        if ($distros -match "(?m)^$([regex]::Escape($UbuntuDistro))\s*$") { Add-Result 'wsl' $UbuntuDistro 'installed' '' 'CURRENT' 'distro registered for this user' }
+        else { Add-Result 'wsl' $UbuntuDistro '' 'required' 'MISSING' 'distro not registered for this user' "wsl --install -d $UbuntuDistro  (Administrator PowerShell)" }
+    } else { Add-Result 'wsl' $UbuntuDistro '' 'required' 'MISSING' 'wsl.exe not found' 'Run setup-employee.ps1 (features step), reboot, rerun.' }
+    $cfg = Join-Path $env:USERPROFILE '.wslconfig'
+    if (Test-Path $cfg) { Add-Result 'wsl' '.wslconfig' 'present' '' 'CURRENT' "$cfg exists" }
+    else                { Add-Result 'wsl' '.wslconfig' '' 'required' 'MISSING' 'no memory cap for WSL2' 'Run setup-employee.ps1 -Only wslconfig' }
+
+    $upCmd = Write-Launcher 'Start-Upgrade.cmd' $ScriptPath 'update-employee.ps1' '-Install'
+    $seCmd = Write-Launcher 'Start-Setup.cmd'   $SetupPath  'setup-employee.ps1'  ''
+    Write-Host ''
+    $m = @($Results | Where-Object Status -eq 'MISSING').Count; $o = @($Results | Where-Object Status -eq 'OUTDATED').Count
+    if ($m -eq 0 -and $o -eq 0) { Write-Host 'diff: this laptop matches the standard toolset.' -ForegroundColor Green }
+    else { Write-Host "diff: $m missing, $o outdated. Open the report and click the button, or run Start-Upgrade.cmd / Start-Setup.cmd next to it." -ForegroundColor Yellow }
+    Write-DiffReport -UpgradeCmd $upCmd -SetupCmd $seCmd
     return
 }
 

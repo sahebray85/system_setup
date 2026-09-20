@@ -146,7 +146,7 @@ Browsers for web dev: Chrome 153, Edge 153.
 | VPN | Surfshark | 6.18.0999 | winget `Surfshark.Surfshark`; `Surfshark Service` running; OpenVPN Data Channel Offload adapter (disconnected) |
 | VPN | Norton VPN | (Norton 360) | Service `NortonVpn` running |
 | Zero Trust / SASE | none found | | No Zscaler, Pulse Secure / Ivanti, GlobalProtect, Cisco AnyConnect / Secure Client, Netskope, Cloudflare WARP, Tailscale or ZeroTier. `cloudflared` is a tunnel CLI, not a zero-trust client |
-| Disk encryption | BitLocker | OS | Service `BDESVC` running; volume status needs an elevated shell |
+| Disk encryption | BitLocker | OS | C: and D: ProtectionStatus On, 100% encrypted, FullyEncrypted (verified 2026-09-20 in an elevated shell) |
 | Archivers | 7-Zip | 26.02 | winget `7zip.7zip` (update 26.03 available); not on PATH |
 | Archivers | WinRAR | 7.13 | winget `RARLab.WinRAR` (update 7.23 available) + shell-extension MSIX |
 | Archivers (CLI) | tar, unzip, gzip | Git for Windows bundle | on PATH via `C:\Program Files\Git\usr\bin` |
@@ -201,6 +201,22 @@ Manual apt packages are the base image plus `python3`, `python3-pip`, `wslu`. To
 present: Python 3.12.3, gcc 13.3.0, make, git 2.43.0. Docker via Desktop integration.
 No node, java, nvm, sdkman, cargo, go, or pyenv inside WSL.
 
+## 14. Windows optional features (enabled)
+
+From `Get-WindowsOptionalFeature -Online` run as Administrator on 2026-09-20.
+
+| Feature | Why it matters |
+|---|---|
+| Microsoft-Windows-Subsystem-Linux | Required by WSL 2 |
+| VirtualMachinePlatform | Required by WSL 2 and Docker Desktop's WSL backend |
+| NetFx4-AdvSrvs, WCF-Services45, WCF-TCP-PortSharing45 | .NET Framework 4.x advanced services and WCF |
+| Microsoft-RemoteDesktopConnection, MSRDC-Infrastructure | Remote Desktop client |
+| SmbDirect, WorkFolders-Client, SearchEngine-Client-Package | File sharing / search |
+| MediaPlayback, WindowsMediaPlayer | Media |
+| Printing-XPSServices-Features, Printing-PrintToPDFServices-Features, Printing-Foundation-Features, Printing-Foundation-InternetPrinting-Client | Printing |
+
+Not enabled: Hyper-V, Containers, Windows Sandbox, IIS.
+
 ---
 
 ## Checked and not installed
@@ -212,7 +228,5 @@ scoop, protoc, flutter/dart, ollama, ngrok, pandoc.
 
 ## Could not verify
 
-- Windows optional features (Hyper-V, Containers, WSL feature flags) need an elevated shell.
-- BitLocker volume encryption status (`Get-BitLockerVolume`) needs an elevated shell.
 - Docker Desktop Kubernetes setting read back empty from `settings-store.json`.
 

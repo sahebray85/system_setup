@@ -24,9 +24,8 @@ quote above the minimum unless the item is marked "preferred".
 
 ## Preferred (quote only if the price difference is small)
 - 16 GB installed as 2× 8 GB (dual channel)
-- 1 TB SSD instead of 512 GB
+- 512 GB or more
 - Ethernet (RJ45) port
-- Aluminium lid or MIL-STD-810 rated chassis
 
 ## Reference models that meet this spec
 - Lenovo ThinkBook 16 G7 ARP (Ryzen 7 7735HS, 16 GB, 512 GB, Windows 11 Pro)
@@ -40,12 +39,6 @@ quote above the minimum unless the item is marked "preferred".
 - Grade A cosmetic condition, battery health 80 percent or better (state it on the invoice)
 - Windows 11 Pro activated with a genuine licence
 - **Minimum 1 year warranty stated on the invoice**
-
-## Not required
-- Dedicated NVIDIA/AMD graphics card
-- Touchscreen, OLED, 4K or high refresh rate panels
-- More than 16 GB RAM or more than 1 TB storage
-- Pre-installed antivirus, Office or other bundled software (we install our own)
 
 ## Please include in the quote
 - Exact model number and SKU, processor, RAM configuration (slots used), SSD, OS edition

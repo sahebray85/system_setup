@@ -57,3 +57,11 @@ https://gist.github.com/sahebray85/5ee0da6bf8c918f0ff94af6d58199040
 After editing, push with `gh gist edit 5ee0da6bf8c918f0ff94af6d58199040 -f <name>.ps1 employee-laptop/<name>.ps1`.
 Keep them free of company names, account details and local paths. `bootstrap.ps1` remains the
 replay of the owner's own machine and is not for employees.
+
+## Laptop quotation evaluation
+
+`QUOTE_EVALUATION_2026-09-23.md` evaluates Genius Infoway quotation GIB/247/2026-27 (PDF kept
+untracked in the repo root because it carries the vendor's bank details) against
+`HARDWARE_REQUIREMENT.md` and Indian retail prices. Short version: nothing quoted matches the
+spec, the P16s is 25% over reseller price, and both refurbished lines fail the 1-year warranty
+requirement.
